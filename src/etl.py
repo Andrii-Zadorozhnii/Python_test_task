@@ -1,23 +1,38 @@
-import logger
+from .utils import load_json, filter_by_date, merge_data, calculate_cpa
+from .database import init_db, upsert_data
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def run_etl(start_date, end_date, logger):
-    try:
-        spend_data = load_json("data/fb_spend.json")
-        conv_data = load_json("data/network_conv.json")
+def run_etl(start_date, end_date, data_dir="data"):
+    logger.info(f"Starting ETL for {start_date} to {end_date}")
 
-        filtered_spend = filter_by_date(spend_data, start_date, end_date)
-        filtered_conv = filter_by_date(conv_data, start_date, end_date)
+    # Load data
+    spend_data = load_json(f"{data_dir}/fb_spend.json")
+    conv_data = load_json(f"{data_dir}/network_conv.json")
 
-        merged_data = merge_datasets(filtered_spend, filtered_conv)
+    # Filter data
+    filtered_spend = filter_by_date(spend_data, start_date, end_date)
+    filtered_conv = filter_by_date(conv_data, start_date, end_date)
 
-        calculated_data = calculate_cpa(merged_data)
+    # Merge data
+    merged_data = merge_data(filtered_spend, filtered_conv)
 
-        with Database() as db:
-            db.upsert_data(calculated_data)
+    # Calculate CPA
+    result_data = calculate_cpa(merged_data)
 
-        logger.error(f"Processed {len(calculated_data)} records")
+    # Initialize DB
+    init_db()
 
-    except Exception as e:
-        logger.exception(f"ETL process failed: {e}")
-        raise
+    # Upsert data
+    upsert_data(result_data)
+
+    # Print summary
+    logger.info(f"Processed {len(result_data)} records")
+    print(f"ETL Summary ({start_date} to {end_date}):")
+    print(f"- {len(result_data)} records processed")
+    print(f"- {len(filtered_spend)} spend records")
+    print(f"- {len(filtered_conv)} conversion records")
+
+    return result_data

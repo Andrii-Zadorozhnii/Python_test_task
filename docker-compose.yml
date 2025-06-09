@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  cpa-calculator:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./db:/app/db
+    environment:
+      DB_PATH: /app/db/cpa_data.db
+    command: ["python", "src/main.py", "--start-date", "2025-06-01", "--end-date", "2025-06-07"]
